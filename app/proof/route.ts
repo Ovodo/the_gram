@@ -25,52 +25,34 @@ export const GET = async (req: Request) => {
     // const client = await clientPromise;
     // const db = client.db("SuiGram");
 
-    // const user = await db.collection("Users").findOne({ address: userAddress });
-    const users = createClient({
-      url: process.env.USERS_REST_API_URL,
-      token: process.env.USERS_REST_API_TOKEN,
-    });
-
-    const use = await users.hgetall(`user:${userAddress}`);
-    console.log(use);
-    return Response.json({ message: "gotten user", use });
-
-    const user: any = await kv.get(`user:${userAddress}`);
+    const user: any = await kv.get(`acc:${userAddress}`);
+    const ephemeralKeyPair = keypairFromSecretKey(user.privateKey);
+    console.log(user);
 
     const payload = JSON.stringify(
       {
-        maxEpoch: user?.max,
-        jwtRandomness: user?.randomness,
+        maxEpoch: user.maxEpoch,
+        jwtRandomness: user.randomness,
         extendedEphemeralPublicKey: getExtendedEphemeralPublicKey(
-          user?.publickKey
+          ephemeralKeyPair.getPublicKey()
         ),
-        jwt: user?.jwt,
-        salt: user?.salt,
+        jwt: user.jwt,
+        salt: user.salt,
         keyClaimName: "sub",
       },
       null,
       2
     );
 
-    const zkProofs = await fetch("https://prover-dev.mystenlabs.com/v1", {
+    const res = await fetch("https://prover-dev.mystenlabs.com/v1", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: payload,
-    })
-      .then((res) => {
-        console.debug("[completeZkLogin] ZK proving service success");
-        return res.json();
-      })
-      .catch((error: unknown) => {
-        console.warn("[completeZkLogin] ZK proving service error:", error);
-        return null;
-      })
-      .finally(() => {
-        console.log("done");
-      });
+    });
+    const zkProofs = await res.json();
 
-    if (!zkProofs) {
-      return Response.json({ message: "No Zk proof" }, { status: 404 });
+    if (zkProofs?.error) {
+      return Response.json({ message: zkProofs?.message }, { status: 404 });
     }
     console.log(zkProofs);
     return Response.json({ message: zkProofs }, { status: 200 });
@@ -79,3 +61,8 @@ export const GET = async (req: Request) => {
     return Response.json({ message: error.message }, { status: 500 });
   }
 };
+
+function keypairFromSecretKey(privateKeyBase64: string): Ed25519Keypair {
+  const keyPair = decodeSuiPrivateKey(privateKeyBase64);
+  return Ed25519Keypair.fromSecretKey(keyPair.secretKey);
+}

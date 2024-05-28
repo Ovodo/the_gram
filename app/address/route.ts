@@ -30,17 +30,20 @@ export const GET = async (req: Request) => {
     const userSalt = BigInt("1234").toString();
     const address = jwtToAddress(jwt, userSalt);
     const randomness = generateRandomness();
-    const user = {
+    const user = JSON.stringify({
       address,
       salt: userSalt,
       jwt,
-      publicKey: ephemeralKeyPair.getPublicKey().toBase64(),
+      publicKey: ephemeralKeyPair.getPublicKey(),
       privateKey: ephemeralKeyPair.getSecretKey(),
       randomness,
       maxEpoch,
-    };
+    });
 
-    await kv.set(`user:${address}`, user, { ex: 48 * 60 * 60 }); // Set TTL to 1 day
+    console.log(user);
+
+    await kv.set(`acc:${address}`, user, { ex: 2 * 60 * 60 }); // Set TTL to 1 day
+    // await kv.set(`news`, "tokos", { ex: 1 * 60 * 60 }); // Set TTL to 1 day
 
     return new Response(
       JSON.stringify({ message: "Sign in successful!", address }),
