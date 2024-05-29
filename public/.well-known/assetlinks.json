@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.tricode.suigram",
+      "sha256_cert_fingerprints": [
+            "EA:3B:57:75:8F:7C:C6:BB:22:33:9C:41:E3:A2:6C:94:29:F8:18:82"
+      ]
+    }
+  }
+]
