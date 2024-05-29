@@ -16,8 +16,25 @@ import {
 
 const MAX_EPOCH = 2; // keep ephemeral keys active for this many Sui epochs from now (1 epoch ~= 24h)
 const suiClient = new SuiClient({ url: getFullnodeUrl("testnet") });
-const add1 =
-  "0x01838c004280b963d366818aa864022ddea8c2a3f12bed32a38eac3f714a7678";
+async function getSaltFromMystenAPI(jwtEncoded: string) {
+  const url: string =
+    process.env.NEXT_PUBLIC_SALT_API ||
+    "https://salt.api.mystenlabs.com/get_salt";
+  const payload = { token: jwtEncoded };
+
+  const response = await fetch(url!, {
+    method: "POST",
+    mode: "cors",
+    cache: "no-cache",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    referrerPolicy: "no-referrer",
+    body: JSON.stringify(payload),
+  });
+  const responseJson = await response.json();
+  return responseJson.salt;
+}
 
 export const GET = async (req: Request) => {
   const { epoch } = await suiClient.getLatestSuiSystemState();
@@ -27,6 +44,9 @@ export const GET = async (req: Request) => {
 
   const ephemeralKeyPair = new Ed25519Keypair();
   try {
+    const salt = await getSaltFromMystenAPI(jwt);
+    console.log(salt);
+    return Response.json(salt);
     const userSalt = BigInt("1234").toString();
     const address = jwtToAddress(jwt, userSalt);
     const randomness = generateRandomness();
@@ -34,7 +54,6 @@ export const GET = async (req: Request) => {
       address,
       salt: userSalt,
       jwt,
-      publicKey: ephemeralKeyPair.getPublicKey(),
       privateKey: ephemeralKeyPair.getSecretKey(),
       randomness,
       maxEpoch,
