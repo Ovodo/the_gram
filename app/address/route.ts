@@ -32,7 +32,10 @@ async function getSaltFromMystenAPI(jwtEncoded: string) {
     referrerPolicy: "no-referrer",
     body: JSON.stringify(payload),
   });
+
   const responseJson = await response.json();
+  console.log(responseJson);
+
   return responseJson.salt;
 }
 
